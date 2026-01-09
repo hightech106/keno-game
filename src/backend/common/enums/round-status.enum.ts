@@ -1,0 +1,9 @@
+export enum RoundStatus {
+  OPEN = 'OPEN',
+  CLOSING = 'CLOSING',
+  DRAWING = 'DRAWING',
+  SETTLING = 'SETTLING',
+  PAYOUT = 'PAYOUT',
+  ARCHIVED = 'ARCHIVED',
+  CANCELLED = 'CANCELLED',
+}
