@@ -8,6 +8,7 @@ import { SettlementService } from './services/settlement.service';
 import { GameEngineModule } from '../game-engine/game-engine.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { OperatorModule } from '../operator/operator.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { OperatorModule } from '../operator/operator.module';
     GameEngineModule,
     WalletModule,
     OperatorModule,
+    CommonModule,
   ],
   providers: [
     PayoutTableService,

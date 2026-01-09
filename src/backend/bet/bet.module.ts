@@ -7,6 +7,7 @@ import { WalletModule } from '../wallet/wallet.module';
 import { OperatorModule } from '../operator/operator.module';
 import { RoundModule } from '../round/round.module';
 import { PayoutModule } from '../payout/payout.module';
+import { CommonModule } from '../common/common.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PayoutModule } from '../payout/payout.module';
     OperatorModule,
     RoundModule,
     PayoutModule,
+    CommonModule,
   ],
   controllers: [BetController],
   providers: [BetService],

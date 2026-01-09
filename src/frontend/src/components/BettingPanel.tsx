@@ -35,8 +35,8 @@ const BettingPanel = () => {
         selections: selectedNumbers,
       };
 
-      const response = await axios.post('/api/bets', payload);
-      setMessage(`Bet placed successfully! Ticket: ${response.data.ticketId}`);
+      const response = await axios.post('http://localhost:3000/bets', payload);
+      setMessage(`Bet placed successfully! Bet ID: ${response.data.betId}`);
       setSelectedNumbers([]);
     } catch (error: any) {
       console.error('Bet Error:', error);

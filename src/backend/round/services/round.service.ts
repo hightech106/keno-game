@@ -8,6 +8,7 @@ import { NumberDrawService } from '../../game-engine/services/number-draw.servic
 import { FairnessService } from '../../fairness/services/fairness.service';
 import { SettlementService } from '../../payout/services/settlement.service';
 import { GameGateway } from '../../gateway/game.gateway';
+import { AuditLogService } from '../../common/services/audit-log.service';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -26,6 +27,7 @@ export class RoundService {
     private readonly fairnessService: FairnessService,
     private readonly settlementService: SettlementService,
     private readonly gameGateway: GameGateway,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   /**
@@ -162,6 +164,13 @@ export class RoundService {
 
     round.status = updatedStatus;
     const savedRound = await this.roundRepository.save(round);
+
+    // Audit log state change
+    await this.auditLogService.logRoundStateChange(
+      roundId,
+      round.status,
+      updatedStatus,
+    );
 
     // Emit real-time events
     this.gameGateway.emitRoundStateChange(
