@@ -1,10 +1,13 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Round } from '../../database/entities/round.entity';
 import { RoundStatus } from '../../common/enums/round-status.enum';
 import { RoundLifecycleService } from './round-lifecycle.service';
 import { NumberDrawService } from '../../game-engine/services/number-draw.service';
+import { FairnessService } from '../../fairness/services/fairness.service';
+import { SettlementService } from '../../payout/services/settlement.service';
+import { GameGateway } from '../../gateway/game.gateway';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -13,11 +16,16 @@ import { v4 as uuidv4 } from 'uuid';
  */
 @Injectable()
 export class RoundService {
+  private readonly logger = new Logger(RoundService.name);
+
   constructor(
     @InjectRepository(Round)
     private readonly roundRepository: Repository<Round>,
     private readonly lifecycleService: RoundLifecycleService,
     private readonly numberDrawService: NumberDrawService,
+    private readonly fairnessService: FairnessService,
+    private readonly settlementService: SettlementService,
+    private readonly gameGateway: GameGateway,
   ) {}
 
   /**
@@ -25,6 +33,8 @@ export class RoundService {
    */
   async createRound(scheduledTime: Date): Promise<Round> {
     const roundId = this.generateRoundId();
+    const serverSeed = this.fairnessService.generateServerSeed();
+    const serverSeedHash = this.fairnessService.hashServerSeed(serverSeed);
     
     const round = this.roundRepository.create({
       roundId,
@@ -34,6 +44,9 @@ export class RoundService {
       totalBet: 0,
       totalPayout: 0,
       resultPublished: false,
+      serverSeed,
+      serverSeedHash,
+      nonce: 1,
     });
 
     return await this.roundRepository.save(round);
@@ -64,8 +77,27 @@ export class RoundService {
     roundId: string,
     newStatus: RoundStatus,
   ): Promise<Round> {
+    // Explicitly select serverSeed (which has select: false) since we need it for drawing
     const round = await this.roundRepository.findOne({
       where: { roundId },
+      select: [
+        'roundId',
+        'status',
+        'scheduledTime',
+        'openTime',
+        'closeTime',
+        'drawTime',
+        'numbersDrawn',
+        'serverSeed', // Required for generateDraw
+        'serverSeedHash',
+        'clientSeed',
+        'nonce',
+        'totalBet',
+        'totalPayout',
+        'resultPublished',
+        'createdAt',
+        'updatedAt',
+      ],
     });
 
     if (!round) {
@@ -85,11 +117,40 @@ export class RoundService {
         break;
       case RoundStatus.DRAWING:
         round.drawTime = now;
-        // Generate numbers when entering DRAWING state
-        round.numbersDrawn = this.numberDrawService.generateDrawNumbers();
+        // Generate numbers when entering DRAWING state using Fairness Service
+        
+        // Ensure serverSeed exists (should always be set on creation, but handle legacy rounds)
+        if (!round.serverSeed) {
+          // Legacy round without serverSeed - generate one (not provably fair, but allows system to continue)
+          this.logger.warn(`Round ${roundId} missing serverSeed. Generating fallback seed (not provably fair).`);
+          round.serverSeed = this.fairnessService.generateServerSeed();
+          // Generate hash for consistency
+          if (!round.serverSeedHash) {
+            round.serverSeedHash = this.fairnessService.hashServerSeed(round.serverSeed);
+          }
+        }
+        
+        // Ensure client seed is set (simulate if missing)
+        if (!round.clientSeed) {
+          // In a real environment, this would be set by external event or API
+          // For now, we generate a random one to ensure the draw can proceed
+          round.clientSeed = this.fairnessService.generateServerSeed().substring(0, 32);
+        }
+        
+        // Ensure nonce is set
+        if (!round.nonce || round.nonce === 0) {
+          round.nonce = 1;
+        }
+        
+        round.numbersDrawn = this.fairnessService.generateDraw(
+          round.serverSeed,
+          round.clientSeed,
+          round.nonce
+        );
         break;
       case RoundStatus.SETTLING:
         // Settlement happens here
+        await this.settlementService.settleRound(round);
         break;
       case RoundStatus.PAYOUT:
         // Payout happens here
@@ -100,7 +161,27 @@ export class RoundService {
     }
 
     round.status = updatedStatus;
-    return await this.roundRepository.save(round);
+    const savedRound = await this.roundRepository.save(round);
+
+    // Emit real-time events
+    this.gameGateway.emitRoundStateChange(
+      savedRound.roundId,
+      savedRound.status,
+      savedRound.scheduledTime,
+    );
+
+    if (updatedStatus === RoundStatus.DRAWING) {
+      this.gameGateway.emitDrawNumbers(
+        savedRound.roundId,
+        savedRound.numbersDrawn,
+      );
+    }
+
+    if (updatedStatus === RoundStatus.ARCHIVED) {
+      this.gameGateway.emitRoundSettled(savedRound.roundId);
+    }
+
+    return savedRound;
   }
 
   /**

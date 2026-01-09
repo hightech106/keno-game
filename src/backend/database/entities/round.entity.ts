@@ -37,6 +37,18 @@ export class Round {
   @Column({ type: 'integer', array: true, nullable: true })
   numbersDrawn: number[];
 
+  @Column({ type: 'varchar', length: 64, nullable: true, select: false })
+  serverSeed: string;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  serverSeedHash: string;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  clientSeed: string;
+
+  @Column({ type: 'integer', default: 0 })
+  nonce: number;
+
   @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
   totalBet: number;
 
