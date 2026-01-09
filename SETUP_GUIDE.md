@@ -116,6 +116,8 @@ npm test
 ### Run Integration Tests
 
 ```bash
+cd src/backend
+
 # Set up test database first
 createdb keno_test
 
@@ -312,9 +314,11 @@ keno-game/
 │   │   ├── scheduler/    # Round scheduling
 │   │   └── wallet/       # Wallet integration
 │   └── frontend/         # React frontend
-├── tests/
-│   ├── unit/             # Unit tests
-│   └── integration/      # Integration tests
+├── src/
+│   └── backend/
+│       └── tests/
+│           ├── unit/             # Unit tests
+│           └── integration/      # Integration tests
 └── docs/                 # Documentation
 ```
 

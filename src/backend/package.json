@@ -85,22 +85,34 @@
     ],
     "rootDir": ".",
     "roots": [
-      "<rootDir>/../../tests",
+      "<rootDir>/tests",
       "<rootDir>"
     ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
-      "^.+\\.(t|j)s$": "ts-jest"
+      "^.+\\.(t|j)s$": [
+        "ts-jest",
+        {
+          "tsconfig": "./tsconfig.json",
+          "isolatedModules": false
+        }
+      ]
     },
     "collectCoverageFrom": [
-      "src/backend/**/*.(t|j)s",
-      "!src/backend/**/*.spec.ts"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!tests/**"
     ],
     "coverageDirectory": "coverage",
     "testEnvironment": "node",
+    "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"],
+    "moduleDirectories": [
+      "<rootDir>/node_modules",
+      "node_modules"
+    ],
     "moduleNameMapper": {
-      "^@backend/(.*)$": "<rootDir>/src/backend/$1",
-      "^@shared/(.*)$": "<rootDir>/src/shared/$1",
+      "^@backend/(.*)$": "<rootDir>/$1",
+      "^@shared/(.*)$": "<rootDir>/../shared/$1",
       "^@tests/(.*)$": "<rootDir>/tests/$1"
     }
   }
