@@ -7,6 +7,10 @@ import { RoundModule } from './round/round.module';
 import { PayoutModule } from './payout/payout.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { DatabaseModule } from './database/database.module';
+import { OperatorModule } from './operator/operator.module';
+import { WalletModule } from './wallet/wallet.module';
+import { BetModule } from './bet/bet.module';
+import { GatewayModule } from './gateway/gateway.module';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
@@ -28,6 +32,14 @@ import { ConfigService } from '@nestjs/config';
     RoundModule,
     PayoutModule,
     SchedulerModule,
+    
+    // Business Logic Modules
+    OperatorModule,
+    WalletModule,
+    BetModule,
+    
+    // WebSocket Gateway
+    GatewayModule,
   ],
   controllers: [],
   providers: [],
