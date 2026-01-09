@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { AppModule } from '../../src/backend/app.module';
+import { AppModule } from '../../app.module';
 import { DataSource } from 'typeorm';
 
 /**
@@ -26,7 +26,7 @@ export async function createTestModule(
         password: process.env.TEST_DB_PASSWORD || 'postgres',
         database: process.env.TEST_DB_NAME || 'keno_test',
         entities: [
-          __dirname + '/../../src/backend/database/entities/*.entity{.ts,.js}',
+          __dirname + '/../../database/entities/*.entity{.ts,.js}',
         ],
         synchronize: true, // Auto-create schema for tests
         dropSchema: true, // Drop schema before each test run

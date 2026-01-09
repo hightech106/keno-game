@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
-import { AppModule } from '../../src/backend/app.module';
+import { AppModule } from '../../app.module';
 import { DataSource } from 'typeorm';
-import { RoundService } from '../../src/backend/round/services/round.service';
-import { BetService } from '../../src/backend/bet/services/bet.service';
+import { RoundService } from '../../round/services/round.service';
+import { BetService } from '../../bet/services/bet.service';
 import { createTestModule, closeTestModule } from './test-setup';
 
-import { JwtAuthGuard } from '../../src/backend/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ExecutionContext } from '@nestjs/common';
 
 describe('API Endpoints Integration', () => {

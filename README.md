@@ -127,6 +127,7 @@ See [API Documentation](http://localhost:3000/api-docs) for complete details.
 npm test
 
 # Integration tests
+cd src/backend
 npm test -- tests/integration
 
 # Coverage
