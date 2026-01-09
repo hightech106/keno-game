@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -11,6 +12,10 @@ import { OperatorModule } from './operator/operator.module';
 import { WalletModule } from './wallet/wallet.module';
 import { BetModule } from './bet/bet.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { AuthModule } from './auth/auth.module';
+import { CommonModule } from './common/common.module';
+import { AdminModule } from './admin/admin.module';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { ConfigService } from '@nestjs/config';
 
 @Module({
@@ -21,11 +26,17 @@ import { ConfigService } from '@nestjs/config';
       envFilePath: ['.env.local', '.env'],
     }),
     
+    // Common utilities (audit logging, etc.)
+    CommonModule,
+    
     // Scheduling for automatic rounds
     ScheduleModule.forRoot(),
     
     // Database
     DatabaseModule,
+    
+    // Authentication
+    AuthModule,
     
     // Core game modules
     GameEngineModule,
@@ -40,8 +51,18 @@ import { ConfigService } from '@nestjs/config';
     
     // WebSocket Gateway
     GatewayModule,
+    
+    // Admin Module
+    AdminModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [
+    // Apply JWT guard globally (can be bypassed with @Public() decorator)
+    // Comment out for development mode, uncomment for production
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: JwtAuthGuard,
+    // },
+  ],
 })
 export class AppModule {}

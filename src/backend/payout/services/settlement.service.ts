@@ -7,6 +7,7 @@ import { PayoutCalculationService } from './payout-calculation.service';
 import { HitDetectionService } from '../../game-engine/services/hit-detection.service';
 import { WalletProvider } from '../../wallet/interfaces/wallet-provider.interface';
 import { OperatorService } from '../../operator/services/operator.service';
+import { AuditLogService } from '../../common/services/audit-log.service';
 
 @Injectable()
 export class SettlementService {
@@ -20,6 +21,7 @@ export class SettlementService {
     @Inject('WALLET_PROVIDER')
     private readonly walletProvider: WalletProvider,
     private readonly operatorService: OperatorService,
+    private readonly auditLogService: AuditLogService,
   ) {}
 
   async settleRound(round: Round): Promise<void> {
@@ -42,13 +44,13 @@ export class SettlementService {
     this.logger.log(`Found ${bets.length} pending bets for Round ${round.roundId}`);
 
     for (const bet of bets) {
-      await this.processBet(bet, round.numbersDrawn);
+      await this.processBet(bet, round.numbersDrawn, round);
     }
 
     this.logger.log(`Settlement completed for Round ${round.roundId}`);
   }
 
-  private async processBet(bet: Bet, drawnNumbers: number[]): Promise<void> {
+  private async processBet(bet: Bet, drawnNumbers: number[], round: Round): Promise<void> {
     try {
       // 1. Calculate Hits
       const hitCount = this.hitDetectionService.calculateHits(bet.numbersSelected, drawnNumbers);
@@ -79,13 +81,46 @@ export class SettlementService {
         const operator = await this.operatorService.getOperator(bet.operatorId);
         const currency = operator.defaultCurrency;
         
-        await this.walletProvider.credit(
+        const creditResult = await this.walletProvider.credit(
           bet.playerId,
           payoutResult.winAmount,
           currency,
           `WIN-${bet.betId}`
         );
+        
+        // Audit log wallet credit
+        await this.auditLogService.logWalletOperation(
+          bet.operatorId,
+          bet.playerId,
+          'CREDIT',
+          payoutResult.winAmount,
+          currency,
+          `WIN-${bet.betId}`,
+          creditResult.success,
+          creditResult.error,
+        );
+        
+        // Audit log bet settlement
+        await this.auditLogService.logBetSettlement(
+          bet.operatorId,
+          bet.playerId,
+          round.roundId,
+          bet.betId,
+          hitCount,
+          payoutResult.winAmount,
+        );
+        
         this.logger.debug(`Credited ${payoutResult.winAmount} ${currency} to ${bet.playerId} for bet ${bet.betId}`);
+      } else {
+        // Log losing bet settlement
+        await this.auditLogService.logBetSettlement(
+          bet.operatorId,
+          bet.playerId,
+          round.roundId,
+          bet.betId,
+          hitCount,
+          0,
+        );
       }
 
     } catch (error) {
