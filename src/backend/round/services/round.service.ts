@@ -132,9 +132,19 @@ export class RoundService {
     betDelta: number,
     payoutDelta: number,
   ): Promise<void> {
+    // await this.roundRepository.increment(
+    //   { roundId },
+    //   { totalBet: betDelta, totalPayout: payoutDelta },
+    // );
     await this.roundRepository.increment(
-      { roundId },
-      { totalBet: betDelta, totalPayout: payoutDelta },
+      {roundId},
+      'totalBet',
+      betDelta,
+    );
+    await this.roundRepository.increment(
+      {roundId},
+      'totalPayout',
+      payoutDelta,
     );
   }
 }

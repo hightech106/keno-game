@@ -64,25 +64,51 @@ export class RoundSchedulerService implements OnModuleInit {
   }
 
   /**
-   * Complete full round cycle: DRAWING → SETTLING → PAYOUT → ARCHIVED
+   * Complete full round cycle: CLOSING → DRAWING → SETTLING → PAYOUT → ARCHIVED
    */
   private async completeRoundCycle(roundId: string) {
     try {
-      // Drawing
-      await this.roundService.transitionRound(roundId, RoundStatus.DRAWING);
-      this.logger.log(`Round ${roundId} entered DRAWING phase`);
+      // Get current round status
+      let round = await this.roundService.getRoundById(roundId);
+      if (!round) {
+        this.logger.error(`Round ${roundId} not found`);
+        return;
+      }
 
-      // Settlement (calculate payouts)
-      await this.roundService.transitionRound(roundId, RoundStatus.SETTLING);
-      this.logger.log(`Round ${roundId} entered SETTLING phase`);
+      // Ensure we transition through CLOSING if still OPEN
+      if (round.status === RoundStatus.OPEN) {
+        round = await this.roundService.transitionRound(roundId, RoundStatus.CLOSING);
+        this.logger.log(`Round ${roundId} entered CLOSING phase`);
+      }
 
-      // Payout (credit winnings)
-      await this.roundService.transitionRound(roundId, RoundStatus.PAYOUT);
-      this.logger.log(`Round ${roundId} entered PAYOUT phase`);
+      // Transition to DRAWING (if in CLOSING state)
+      if (round.status === RoundStatus.CLOSING) {
+        round = await this.roundService.transitionRound(roundId, RoundStatus.DRAWING);
+        this.logger.log(`Round ${roundId} entered DRAWING phase`);
+      }
 
-      // Archive
-      await this.roundService.transitionRound(roundId, RoundStatus.ARCHIVED);
-      this.logger.log(`Round ${roundId} completed and archived`);
+      // Settlement (calculate payouts) - if in DRAWING state
+      if (round.status === RoundStatus.DRAWING) {
+        round = await this.roundService.transitionRound(roundId, RoundStatus.SETTLING);
+        this.logger.log(`Round ${roundId} entered SETTLING phase`);
+      }
+
+      // Payout (credit winnings) - if in SETTLING state
+      if (round.status === RoundStatus.SETTLING) {
+        round = await this.roundService.transitionRound(roundId, RoundStatus.PAYOUT);
+        this.logger.log(`Round ${roundId} entered PAYOUT phase`);
+      }
+
+      // Archive - if in PAYOUT state
+      if (round.status === RoundStatus.PAYOUT) {
+        round = await this.roundService.transitionRound(roundId, RoundStatus.ARCHIVED);
+        this.logger.log(`Round ${roundId} completed and archived`);
+      }
+
+      // If already archived or in an unexpected state, log it
+      if (round.status !== RoundStatus.ARCHIVED) {
+        this.logger.warn(`Round ${roundId} ended in unexpected state: ${round.status}`);
+      }
     } catch (error) {
       this.logger.error(`Error completing round ${roundId}:`, error);
       // TODO: Handle failures - rollback bets, etc.
